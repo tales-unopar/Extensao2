@@ -56,6 +56,14 @@ class Repository: ObservableObject {
         loteamentos.removeAll(where: { $0 == loteamento })
     }
     
+    func updatePayment(_ payment: Payment, loteamento: Loteamento) {
+        guard let paymentIndex = loteamento.payments.firstIndex(where: { $0.id == payment.id }) else { return }
+        
+        loteamento.payments[paymentIndex] = payment
+        
+        updateLoteamento(loteamento)
+    }
+    
     func saveToDisk(_ loteamentos: [Loteamento]) {
         let url = getDocumentsDirectory().appendingPathComponent(Constants.fileName)
                 

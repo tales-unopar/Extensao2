@@ -32,6 +32,18 @@ struct DetailsView: View {
     @State private var selectedItem: PhotosPickerItem? = nil
     @State private var selectedImageData: Data? = nil
     
+    @State private var searchText = ""
+    
+    var searchResult: [Payment] {
+            if searchText.isEmpty {
+                return loteamento.payments
+            } else {
+                return loteamento.payments.filter {
+                    $0.paidBy.contains(searchText)
+                }
+            }
+        }
+    
     var loteamentoDescription: some View {
         VStack {
             if !loteamento.getPresentationText().isEmpty {
@@ -61,6 +73,8 @@ struct DetailsView: View {
                         CardView {
                             HStack {
                                 Text(payment.description)
+                                Spacer()
+                                Text(payment.paidBy)
                                 Spacer()
                                 Text(String(format: "%.2f", payment.amount))
                                 
@@ -107,6 +121,41 @@ struct DetailsView: View {
                 paymentList
                 Spacer()
             }
+            .searchable(text: $searchText) {
+                ForEach(searchResult) { payment in
+                    CardView {
+                        HStack {
+                            Text(payment.description)
+                            Spacer()
+                            Text(String(format: "%.2f", payment.amount))
+                            
+                            if let imageData = payment.imageData, let image = UIImage(data: imageData) {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .frame(width: 50, height: 50)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .onTapGesture {
+                                        selectedImage = image
+                                        isShowingFullImage = true
+                                    }
+                            } else {
+                                    Button(action: {
+                                        requestPhotoLibraryAccess { granted in
+                                            if granted {
+                                                selectedPayment = payment
+                                                isShowingImagePicker = true
+                                            } else {
+                                                print("Acesso negado")
+                                            }
+                                        }
+                                    }) {
+                                        Image(systemName: "photo")
+                                    }
+                            }
+                        }
+                    }
+                }
+            }
             .background(Color.clear)
             .navigationTitle(loteamento.name)
             .toolbar {
@@ -121,17 +170,20 @@ struct DetailsView: View {
             }
         }
         .sheet(isPresented: $isShowingImagePicker) {
-            if let payment = selectedPayment {
+            if var payment = selectedPayment {
                 PhotosPicker(
                     selection: $selectedItem,
                     matching: .images,
                     photoLibrary: .shared()) {
                         Text("Selecione a foto")
                     }
-                    .onChange(of: selectedItem) { newItem in
+                    .onChange(of: selectedItem) { oldValue, newValue in
                         Task {
-                            if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                            if let data = try? await newValue?.loadTransferable(type: Data.self) {
                                 selectedImageData = data
+                                payment.imageData = data
+                                
+                                repository.updatePayment(payment, loteamento: loteamento)
                             }
                         }
                     }
@@ -196,6 +248,8 @@ struct DetailsView: View {
             PHPhotoLibrary.requestAuthorization { newStatus in
                 completion(newStatus == .authorized)
             }
+        case .limited:
+            completion(false)
         @unknown default:
             completion(false)
         }
