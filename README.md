@@ -21,7 +21,7 @@ O **LoteamentoApp** é um aplicativo desenvolvido para o registro e trackeamento
 2. Abra o projeto no Xcode.
 3. Execute o aplicativo no simulador ou em um dispositivo físico.
 
-Screenshots
+### Screenshots
 
 | Funcionalidade        | Imagens                                                                                      |
 | --------------------- | -------------------------------------------------------------------------------------------- |
